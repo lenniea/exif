@@ -40,6 +40,11 @@ int main(int ac, char *av[])
     void **ifdArray;
     TagNodeInfo *tag;
     int i, result;
+    int infoFlag = 0;
+    int removeFlag = 0;
+    int stripFlag = 0;
+    int thumbnailFlag = 0;
+    int updateFlag = 0;
 
 #ifdef _MSC_VER
 #ifdef _DEBUG
@@ -48,14 +53,37 @@ int main(int ac, char *av[])
 #endif
 
     if (ac < 2) {
-        printf("usage: %s <JPEG FileName> [-v]erbose\n", av[0]);
+        printf("usage: %s <JPEG FileName> [-i]nfo [-r]emove [-s]trip [-t]humbnail [-u]pdate [-v]erbose\n", av[0]);
         return 0;
     }
 
-    // -v option
-    if (ac >= 3) {
-        if ((*av[2] == '-' || *av[2] == '/') && (*(av[2]+1) == 'v')) {
-            setVerbose(1);
+    for (i = 2; i < ac; ++i) {
+        // -v option
+        const char* arg = av[i];
+        if (arg[0] == '-' || arg[0] == '/') {
+            switch (arg[1]) {
+                case 'i':
+                    infoFlag = 1;
+                    break;
+                case 'r':
+                    removeFlag = 1;
+                    break;
+                case 's':
+                    stripFlag = 1;
+                    break;
+                case 't':
+                    thumbnailFlag = 1;
+                    break;
+                case 'u':
+                    updateFlag = 1;
+                    break;
+                case 'v':
+                    setVerbose(1);
+                    break;
+                default:
+                    fprintf(stderr, "Invalid option %s!\n", arg);
+                    return -1;
+            }
         }
     }
 
@@ -132,19 +160,34 @@ int main(int ac, char *av[])
 
 
     // sample function A: remove the Exif segment in a JPEG file
-    // result = sample_removeExifSegment(av[1], "removeExif.jpg");
+    if (stripFlag) {
+        result = sample_removeExifSegment(av[1], "removeExif.jpg");
+        printf("sample_removeExifSegment(%s)=%d\n", av[1], result);
+    }
 
     // sample function B: remove sensitive Exif data in a JPEG file
-    // result = sample_removeSensitiveData(av[1], "removeSensitive.jpg");
+    if (removeFlag) {
+        result = sample_removeSensitiveData(av[1], "removeSensitive.jpg");
+        printf("sample_removeSensitiveData(%s)=%d\n", av[1], result);
+    }
 
     // sample function C: check if "GPSLatitude" tag exists in GPS IFD
-    // result = sample_queryTagExists(av[1]);
+    if (infoFlag) {
+        result = sample_queryTagExists(av[1]);
+        printf("sample_queryTagExists(%s)=%d\n", av[1], result);
+    }
 
     // sample function D: Update the value of "Make" tag in 0th IFD
-    // result = sample_updateTagData(av[1], "updateTag.jpg");
+    if (updateFlag) {
+        result = sample_updateTagData(av[1], "updateTag.jpg");
+        printf("sample_updateTagData(%s)=%d\n", av[1], result);
+    }
 
     // sample function E: Write Exif thumbnail data to file
-    // result = sample_saveThumbnail(av[1], "thumbnail.jpg");
+    if (thumbnailFlag) {
+        result = sample_saveThumbnail(av[1], "thumbnail.jpg");
+        printf("sample_saveThumbnail(%s)=%d\n", av[1], result);
+    }
 
     return result;
 }
