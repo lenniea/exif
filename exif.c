@@ -495,13 +495,17 @@ static void _dumpIfdTable(void *pIfd, char **p)
 
             case TYPE_UNDEFINED:
                 count = tag->count;
-                // omit too long data
-                if (count > 16) { // && !Verbose) {
+                // omit too long data if !Verbose
+                if (count > 16 && !Verbose) {
                     count = 16;
                 }
                 for (i = 0; i < (int)count; i++) {
-                    // if character is printable
-                    if (isgraph(tag->byteData[i])) {
+                    if (Verbose) {
+                        // Always show hex if Verbose
+                        const char* fmt = ((i&31)==31) ? "%02X\n" : "%02X "; 
+                        PRINTF(p, fmt, tag->byteData[i]);
+                    } else if (isgraph(tag->byteData[i])) {
+                        // if character is printable
                         PRINTF(p, "%c ", tag->byteData[i]);
                     } else {
                         PRINTF(p, "0x%02x ", tag->byteData[i]);
@@ -1335,163 +1339,168 @@ static char *getTagName(int ifdType, unsigned short tagId)
     static char tagName[128];
     if (ifdType == IFD_0TH || ifdType == IFD_1ST || ifdType == IFD_EXIF) {
         strcpy(tagName,
-            (tagId == 0x0100) ? "ImageWidth" :
-            (tagId == 0x0101) ? "ImageLength" :
-            (tagId == 0x0102) ? "BitsPerSample" :
-            (tagId == 0x0103) ? "Compression" :
-            (tagId == 0x0106) ? "PhotometricInterpretation" :
-            (tagId == 0x0112) ? "Orientation" :
-            (tagId == 0x0115) ? "SamplesPerPixel" :
-            (tagId == 0x011C) ? "PlanarConfiguration" :
-            (tagId == 0x0212) ? "YCbCrSubSampling" :
-            (tagId == 0x0213) ? "YCbCrPositioning" :
-            (tagId == 0x011A) ? "XResolution" :
-            (tagId == 0x011B) ? "YResolution" :
-            (tagId == 0x0128) ? "ResolutionUnit" :
+            (tagId == TAG_ImageWidth) ? "ImageWidth" :
+            (tagId == TAG_ImageLength) ? "ImageLength" :
+            (tagId == TAG_BitsPerSample) ? "BitsPerSample" :
+            (tagId == TAG_Compression) ? "Compression" :
+            (tagId == TAG_PhotometricInterpretation) ? "PhotometricInterpretation" :
+            (tagId == TAG_Orientation) ? "Orientation" :
+            (tagId == TAG_SamplesPerPixel) ? "SamplesPerPixel" :
+            (tagId == TAG_PlanarConfiguration) ? "PlanarConfiguration" :
+            (tagId == TAG_YCbCrSubSampling) ? "YCbCrSubSampling" :
+            (tagId == TAG_YCbCrPositioning) ? "YCbCrPositioning" :
+            (tagId == TAG_XResolution) ? "XResolution" :
+            (tagId == TAG_YResolution) ? "YResolution" :
+            (tagId == TAG_ResolutionUnit) ? "ResolutionUnit" :
 
-            (tagId == 0x0111) ? "StripOffsets" :
-            (tagId == 0x0116) ? "RowsPerStrip" :
-            (tagId == 0x0117) ? "StripByteCounts" :
-            (tagId == 0x0201) ? "JPEGInterchangeFormat" :
-            (tagId == 0x0202) ? "JPEGInterchangeFormatLength" :
+            (tagId == TAG_StripOffsets) ? "StripOffsets" :
+            (tagId == TAG_RowsPerStrip) ? "RowsPerStrip" :
+            (tagId == TAG_StripByteCounts) ? "StripByteCounts" :
+            (tagId == TAG_JPEGInterchangeFormat) ? "JPEGInterchangeFormat" :
+            (tagId == TAG_JPEGInterchangeFormatLength) ? "JPEGInterchangeFormatLength" :
 
-            (tagId == 0x012D) ? "TransferFunction" :
-            (tagId == 0x013E) ? "WhitePoint" :
-            (tagId == 0x013F) ? "PrimaryChromaticities" :
-            (tagId == 0x0211) ? "YCbCrCoefficients" :
-            (tagId == 0x0214) ? "ReferenceBlackWhite" :
+            (tagId == TAG_TransferFunction) ? "TransferFunction" :
+            (tagId == TAG_WhitePoint) ? "WhitePoint" :
+            (tagId == TAG_PrimaryChromaticities) ? "PrimaryChromaticities" :
+            (tagId == TAG_YCbCrCoefficients) ? "YCbCrCoefficients" :
+            (tagId == TAG_ReferenceBlackWhite) ? "ReferenceBlackWhite" :
 
-            (tagId == 0x0132) ? "DateTime" :
-            (tagId == 0x010E) ? "ImageDescription" :
-            (tagId == 0x010F) ? "Make" :
-            (tagId == 0x0110) ? "Model" :
-            (tagId == 0x0131) ? "Software" :
-            (tagId == 0x013B) ? "Artist" :
-            (tagId == 0x8298) ? "Copyright" :
-            (tagId == 0x8769) ? "ExifIFDPointer" :
-            (tagId == 0x8825) ? "GPSInfoIFDPointer":
-            (tagId == 0xA005) ? "InteroperabilityIFDPointer" :
+            (tagId == TAG_DateTime) ? "DateTime" :
+            (tagId == TAG_ImageDescription) ? "ImageDescription" :
+            (tagId == TAG_Make) ? "Make" :
+            (tagId == TAG_Model) ? "Model" :
+            (tagId == TAG_Software) ? "Software" :
+            (tagId == TAG_Artist) ? "Artist" :
+            (tagId == TAG_Copyright) ? "Copyright" :
+            (tagId == TAG_ExifIFDPointer) ? "ExifIFDPointer" :
+            (tagId == TAG_GPSInfoIFDPointer) ? "GPSInfoIFDPointer":
+            (tagId == TAG_InteroperabilityIFDPointer) ? "InteroperabilityIFDPointer" :
 
-            (tagId == 0x4746) ? "Rating" :
+            (tagId == TAG_Rating) ? "Rating" :
 
-            (tagId == 0x9000) ? "ExifVersion" :
-            (tagId == 0xA000) ? "FlashPixVersion" :
+            (tagId == TAG_ExifVersion) ? "ExifVersion" :
+            (tagId == TAG_FlashPixVersion) ? "FlashPixVersion" :
 
-            (tagId == 0xA001) ? "ColorSpace" :
+            (tagId == TAG_ColorSpace) ? "ColorSpace" :
 
-            (tagId == 0x9101) ? "ComponentsConfiguration" :
-            (tagId == 0x9102) ? "CompressedBitsPerPixel" :
-            (tagId == 0xA002) ? "PixelXDimension" :
-            (tagId == 0xA003) ? "PixelYDimension" :
+            (tagId == TAG_ComponentsConfiguration) ? "ComponentsConfiguration" :
+            (tagId == TAG_CompressedBitsPerPixel) ? "CompressedBitsPerPixel" :
+            (tagId == TAG_PixelXDimension) ? "PixelXDimension" :
+            (tagId == TAG_PixelYDimension) ? "PixelYDimension" :
 
-            (tagId == 0x927C) ? "MakerNote" :
-            (tagId == 0x9286) ? "UserComment" :
+            (tagId == TAG_MakerNote) ? "MakerNote" :
+            (tagId == TAG_UserComment) ? "UserComment" :
 
-            (tagId == 0xA004) ? "RelatedSoundFile" :
+            (tagId == TAG_RelatedSoundFile) ? "RelatedSoundFile" :
 
-            (tagId == 0x9003) ? "DateTimeOriginal" :
-            (tagId == 0x9004) ? "DateTimeDigitized" :
-            (tagId == 0x9290) ? "SubSecTime" :
-            (tagId == 0x9291) ? "SubSecTimeOriginal" :
-            (tagId == 0x9292) ? "SubSecTimeDigitized" :
+            (tagId == TAG_DateTimeOriginal) ? "DateTimeOriginal" :
+            (tagId == TAG_DateTimeDigitized) ? "DateTimeDigitized" :
+            (tagId == TAG_SubSecTime) ? "SubSecTime" :
+            (tagId == TAG_SubSecTimeOriginal) ? "SubSecTimeOriginal" :
+            (tagId == TAG_SubSecTimeDigitized) ? "SubSecTimeDigitized" :
 
-            (tagId == 0x829A) ? "ExposureTime" :
-            (tagId == 0x829D) ? "FNumber" :
-            (tagId == 0x8822) ? "ExposureProgram" :
-            (tagId == 0x8824) ? "SpectralSensitivity" :
-            (tagId == 0x8827) ? "PhotographicSensitivity" :
-            (tagId == 0x8828) ? "OECF" :
-            (tagId == 0x8830) ? "SensitivityType" :
-            (tagId == 0x8831) ? "StandardOutputSensitivity" :
-            (tagId == 0x8832) ? "RecommendedExposureIndex" :
-            (tagId == 0x8833) ? "ISOSpeed" :
-            (tagId == 0x8834) ? "ISOSpeedLatitudeyyy" :
-            (tagId == 0x8835) ? "ISOSpeedLatitudezzz" :
+            (tagId == TAG_ExposureTime) ? "ExposureTime" :
+            (tagId == TAG_FNumber) ? "FNumber" :
+            (tagId == TAG_ExposureProgram) ? "ExposureProgram" :
+            (tagId == TAG_SpectralSensitivity) ? "SpectralSensitivity" :
+            (tagId == TAG_PhotographicSensitivity) ? "PhotographicSensitivity" :
+            (tagId == TAG_OECF) ? "OECF" :
+            (tagId == TAG_SensitivityType) ? "SensitivityType" :
+            (tagId == TAG_StandardOutputSensitivity) ? "StandardOutputSensitivity" :
+            (tagId == TAG_RecommendedExposureIndex) ? "RecommendedExposureIndex" :
+            (tagId == TAG_ISOSpeed) ? "ISOSpeed" :
+            (tagId == TAG_ISOSpeedLatitudeyyy) ? "ISOSpeedLatitudeyyy" :
+            (tagId == TAG_ISOSpeedLatitudezzz) ? "ISOSpeedLatitudezzz" :
 
-            (tagId == 0x9201) ? "ShutterSpeedValue" :
-            (tagId == 0x9202) ? "ApertureValue" :
-            (tagId == 0x9203) ? "BrightnessValue" :
-            (tagId == 0x9204) ? "ExposureBiasValue" :
-            (tagId == 0x9205) ? "MaxApertureValue" :
-            (tagId == 0x9206) ? "SubjectDistance" :
-            (tagId == 0x9207) ? "MeteringMode" :
-            (tagId == 0x9208) ? "LightSource" :
-            (tagId == 0x9209) ? "Flash" :
-            (tagId == 0x920A) ? "FocalLength" :
-            (tagId == 0x9214) ? "SubjectArea" :
-            (tagId == 0xA20B) ? "FlashEnergy" :
-            (tagId == 0xA20C) ? "SpatialFrequencyResponse" :
-            (tagId == 0xA20E) ? "FocalPlaneXResolution" :
-            (tagId == 0xA20F) ? "FocalPlaneYResolution" :
-            (tagId == 0xA210) ? "FocalPlaneResolutionUnit" :
-            (tagId == 0xA214) ? "SubjectLocation" :
-            (tagId == 0xA215) ? "ExposureIndex" :
-            (tagId == 0xA217) ? "SensingMethod" :
-            (tagId == 0xA300) ? "FileSource" :
-            (tagId == 0xA301) ? "SceneType" :
-            (tagId == 0xA302) ? "CFAPattern" :
+            (tagId == TAG_ShutterSpeedValue) ? "ShutterSpeedValue" :
+            (tagId == TAG_ApertureValue) ? "ApertureValue" :
+            (tagId == TAG_BrightnessValue) ? "BrightnessValue" :
+            (tagId == TAG_ExposureBiasValue) ? "ExposureBiasValue" :
+            (tagId == TAG_MaxApertureValue) ? "MaxApertureValue" :
+            (tagId == TAG_SubjectDistance) ? "SubjectDistance" :
+            (tagId == TAG_MeteringMode) ? "MeteringMode" :
+            (tagId == TAG_LightSource) ? "LightSource" :
+            (tagId == TAG_Flash) ? "Flash" :
+            (tagId == TAG_FocalLength) ? "FocalLength" :
+            (tagId == TAG_SubjectArea) ? "SubjectArea" :
+            (tagId == TAG_FlashEnergy) ? "FlashEnergy" :
+            (tagId == TAG_SpatialFrequencyResponse) ? "SpatialFrequencyResponse" :
+            (tagId == TAG_FocalPlaneXResolution) ? "FocalPlaneXResolution" :
+            (tagId == TAG_FocalPlaneYResolution) ? "FocalPlaneYResolution" :
+            (tagId == TAG_FocalPlaneResolutionUnit) ? "FocalPlaneResolutionUnit" :
+            (tagId == TAG_SubjectLocation) ? "SubjectLocation" :
+            (tagId == TAG_ExposureIndex) ? "ExposureIndex" :
+            (tagId == TAG_SensingMethod) ? "SensingMethod" :
+            (tagId == TAG_FileSource) ? "FileSource" :
+            (tagId == TAG_SceneType) ? "SceneType" :
+            (tagId == TAG_CFAPattern) ? "CFAPattern" :
 
-            (tagId == 0xA401) ? "CustomRendered" :
-            (tagId == 0xA402) ? "ExposureMode" :
-            (tagId == 0xA403) ? "WhiteBalance" :
-            (tagId == 0xA404) ? "DigitalZoomRatio" :
-            (tagId == 0xA405) ? "FocalLengthIn35mmFormat" :
-            (tagId == 0xA406) ? "SceneCaptureType" :
-            (tagId == 0xA407) ? "GainControl" :
-            (tagId == 0xA408) ? "Contrast" :
-            (tagId == 0xA409) ? "Saturation" :
-            (tagId == 0xA40A) ? "Sharpness" :
-            (tagId == 0xA40B) ? "DeviceSettingDescription" :
-            (tagId == 0xA40C) ? "SubjectDistanceRange" :
+            (tagId == TAG_CustomRendered) ? "CustomRendered" :
+            (tagId == TAG_ExposureMode) ? "ExposureMode" :
+            (tagId == TAG_WhiteBalance) ? "WhiteBalance" :
+            (tagId == TAG_DigitalZoomRatio) ? "DigitalZoomRatio" :
+            (tagId == TAG_FocalLengthIn35mmFormat) ? "FocalLengthIn35mmFormat" :
+            (tagId == TAG_SceneCaptureType) ? "SceneCaptureType" :
+            (tagId == TAG_GainControl) ? "GainControl" :
+            (tagId == TAG_Contrast) ? "Contrast" :
+            (tagId == TAG_Saturation) ? "Saturation" :
+            (tagId == TAG_Sharpness) ? "Sharpness" :
+            (tagId == TAG_DeviceSettingDescription) ? "DeviceSettingDescription" :
+            (tagId == TAG_SubjectDistanceRange) ? "SubjectDistanceRange" :
 
-            (tagId == 0xA420) ? "ImageUniqueID" :
-            (tagId == 0xA430) ? "CameraOwnerName" :
-            (tagId == 0xA431) ? "BodySerialNumber" :
-            (tagId == 0xA432) ? "LensSpecification" :
-            (tagId == 0xA433) ? "LensMake" :
-            (tagId == 0xA434) ? "LensModel" :
-            (tagId == 0xA435) ? "LensSerialNumber" :
-            (tagId == 0xA500) ? "Gamma" : 
+            (tagId == TAG_ImageUniqueID) ? "ImageUniqueID" :
+            (tagId == TAG_CameraOwnerName) ? "CameraOwnerName" :
+            (tagId == TAG_BodySerialNumber) ? "BodySerialNumber" :
+            (tagId == TAG_LensSpecification) ? "LensSpecification" :
+            (tagId == TAG_LensMake) ? "LensMake" :
+            (tagId == TAG_LensModel) ? "LensModel" :
+            (tagId == TAG_LensSerialNumber) ? "LensSerialNumber" :
+            (tagId == TAG_Gamma) ? "Gamma" :
+            (tagId == TAG_PrintIM) ? "PrintIM" :
+            (tagId == TAG_Padding) ? "Padding" :
             "(unknown)");
     } else if (ifdType == IFD_GPS) {
         strcpy(tagName,
-            (tagId == 0x0000) ? "GPSVersionID" :
-            (tagId == 0x0001) ? "GPSLatitudeRef" :
-            (tagId == 0x0002) ? "GPSLatitude" :
-            (tagId == 0x0003) ? "GPSLongitudeRef" :
-            (tagId == 0x0004) ? "GPSLongitude" :
-            (tagId == 0x0005) ? "GPSAltitudeRef" :
-            (tagId == 0x0006) ? "GPSAltitude" :
-            (tagId == 0x0007) ? "GPSTimeStamp" :
-            (tagId == 0x0008) ? "GPSSatellites" :
-            (tagId == 0x0009) ? "GPSStatus" :
-            (tagId == 0x000A) ? "GPSMeasureMode" :
-            (tagId == 0x000B) ? "GPSDOP" :
-            (tagId == 0x000C) ? "GPSSpeedRef" :
-            (tagId == 0x000D) ? "GPSSpeed" :
-            (tagId == 0x000E) ? "GPSTrackRef" :
-            (tagId == 0x000F) ? "GPSTrack" :
-            (tagId == 0x0010) ? "GPSImgDirectionRef" :
-            (tagId == 0x0011) ? "GPSImgDirection" :
-            (tagId == 0x0012) ? "GPSMapDatum" :
-            (tagId == 0x0013) ? "GPSDestLatitudeRef" :
-            (tagId == 0x0014) ? "GPSDestLatitude" :
-            (tagId == 0x0015) ? "GPSDestLongitudeRef" :
-            (tagId == 0x0016) ? "GPSDestLongitude" :
-            (tagId == 0x0017) ? "GPSBearingRef" :
-            (tagId == 0x0018) ? "GPSBearing" :
-            (tagId == 0x0019) ? "GPSDestDistanceRef" :
-            (tagId == 0x001A) ? "GPSDestDistance" :
-            (tagId == 0x001B) ? "GPSProcessingMethod" :
-            (tagId == 0x001C) ? "GPSAreaInformation" :
-            (tagId == 0x001D) ? "GPSDateStamp" :
-            (tagId == 0x001E) ? "GPSDifferential" :
-            (tagId == 0x001F) ? "GPSHPositioningError" :
+            (tagId == TAG_GPSVersionID) ? "GPSVersionID" :
+            (tagId == TAG_GPSLatitudeRef) ? "GPSLatitudeRef" :
+            (tagId == TAG_GPSLatitude) ? "GPSLatitude" :
+            (tagId == TAG_GPSLongitudeRef) ? "GPSLongitudeRef" :
+            (tagId == TAG_GPSLongitude) ? "GPSLongitude" :
+            (tagId == TAG_GPSAltitudeRef) ? "GPSAltitudeRef" :
+            (tagId == TAG_GPSAltitude) ? "GPSAltitude" :
+            (tagId == TAG_GPSTimeStamp) ? "GPSTimeStamp" :
+            (tagId == TAG_GPSSatellites) ? "GPSSatellites" :
+            (tagId == TAG_GPSStatus) ? "GPSStatus" :
+            (tagId == TAG_GPSMeasureMode) ? "GPSMeasureMode" :
+            (tagId == TAG_GPSDOP) ? "GPSDOP" :
+            (tagId == TAG_GPSSpeedRef) ? "GPSSpeedRef" :
+            (tagId == TAG_GPSSpeed) ? "GPSSpeed" :
+            (tagId == TAG_GPSTrackRef) ? "GPSTrackRef" :
+            (tagId == TAG_GPSTrack) ? "GPSTrack" :
+            (tagId == TAG_GPSImgDirectionRef) ? "GPSImgDirectionRef" :
+            (tagId == TAG_GPSImgDirection) ? "GPSImgDirection" :
+            (tagId == TAG_GPSMapDatum) ? "GPSMapDatum" :
+            (tagId == TAG_GPSDestLatitudeRef) ? "GPSDestLatitudeRef" :
+            (tagId == TAG_GPSDestLatitude) ? "GPSDestLatitude" :
+            (tagId == TAG_GPSDestLongitudeRef) ? "GPSDestLongitudeRef" :
+            (tagId == TAG_GPSDestLongitude) ? "GPSDestLongitude" :
+            (tagId == TAG_GPSBearingRef) ? "GPSBearingRef" :
+            (tagId == TAG_GPSBearing) ? "GPSBearing" :
+            (tagId == TAG_GPSDestDistanceRef) ? "GPSDestDistanceRef" :
+            (tagId == TAG_GPSDestDistance) ? "GPSDestDistance" :
+            (tagId == TAG_GPSProcessingMethod) ? "GPSProcessingMethod" :
+            (tagId == TAG_GPSAreaInformation) ? "GPSAreaInformation" :
+            (tagId == TAG_GPSDateStamp) ? "GPSDateStamp" :
+            (tagId == TAG_GPSDifferential) ? "GPSDifferential" :
+            (tagId == TAG_GPSHPositioningError) ? "GPSHPositioningError" :
             "(unknown)");
     } else if (ifdType == IFD_IO) {
         strcpy(tagName, 
-            (tagId == 0x0001) ? "InteroperabilityIndex" :
-            (tagId == 0x0002) ? "InteroperabilityVersion" :
+            (tagId == TAG_InteroperabilityIndex) ? "InteroperabilityIndex" :
+            (tagId == TAG_InteroperabilityVersion) ? "InteroperabilityVersion" :
+            (tagId == TAG_RelatedImageFileFormat) ? "RelatedImageFileFormat" :
+            (tagId == TAG_RelatedImageWidth) ? "RelatedImageWidth" :
+            (tagId == TAG_RelatedImageHeight) ? "RelatedImageHeight" :
             "(unknown)");
     }
     return tagName;

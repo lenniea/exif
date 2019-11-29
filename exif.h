@@ -619,6 +619,9 @@ int removeAdobeMetadataSegmentFromJPEGFile(const char *inJPEGFileName,
 #define TAG_LensSerialNumber             0xA435
 #define TAG_Gamma                        0xA500
 
+#define TAG_PrintIM                      0xC4A5
+#define TAG_Padding                      0xEA1C
+
 // GPS IFD
 #define TAG_GPSVersionID                 0x0000
 #define TAG_GPSLatitudeRef               0x0001
@@ -656,5 +659,9 @@ int removeAdobeMetadataSegmentFromJPEGFile(const char *inJPEGFileName,
 // Interoperability IFD
 #define TAG_InteroperabilityIndex        0x0001
 #define TAG_InteroperabilityVersion      0x0002
+
+#define TAG_RelatedImageFileFormat       0x1000
+#define TAG_RelatedImageWidth            0x1001
+#define TAG_RelatedImageHeight           0x1002
 
 #endif // _EXIF_H_
