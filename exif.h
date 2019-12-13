@@ -165,6 +165,26 @@ int removeExifSegmentFromJPEGFile(const char *inJPEGFileName,
                                   const char *outJPGEFileName);
 
 /**
+ * fillIfdTableArray()
+ *
+ * Parse the JPEG header and fill in the IFD table
+ *
+ * parameters
+ *  [in] JPEGFileName : target JPEG file
+ *  [out] ifdArray[32] : array of IfdTable pointers
+ *
+ * return
+ *   n: number of IFD tables
+ *   0: the Exif segment is not found
+ *  -n: error
+ *      ERR_READ_FILE
+ *      ERR_INVALID_JPEG
+ *      ERR_INVALID_APP1HEADER
+ *      ERR_INVALID_IFD
+ */
+int fillIfdTableArray(const char *JPEGFileName, void* ifdArray[32]);
+
+/**
  * createIfdTableArray()
  *
  * Parse the JPEG header and create the pointer array of the IFD tables
@@ -185,6 +205,16 @@ int removeExifSegmentFromJPEGFile(const char *inJPEGFileName,
  *  !NULL: pointer array of the IFD tables
  */
 void **createIfdTableArray(const char *JPEGFileName, int *result);
+
+/**
+ * freeIfdTables()
+ *
+ * Free the pointer array of the IFD tables
+ *
+ * parameters
+ *  [in] ifdArray : address of the IFD array
+ */
+void freeIfdTables(void* ifdArray[32]);
 
 /**
  * freeIfdTableArray()

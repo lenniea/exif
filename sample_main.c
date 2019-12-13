@@ -22,17 +22,46 @@
 
 #ifdef _MSC_VER
 #include <windows.h>
+#include <malloc.h>
 #endif
 #include <stdio.h>
+#include <stdlib.h>     // for malloc, free
+#include <string.h>     // for strcpy
 
 #include "exif.h"
 
 // sample functions
+int sample_addThumbnail(const char *srcJpgFileName, const char*srcThumbFileName, const char *outJpgFileName);
 int sample_removeExifSegment(const char *srcJpgFileName, const char *outJpgFileName);
 int sample_removeSensitiveData(const char *srcJpgFileName, const char *outJpgFileName);
 int sample_queryTagExists(const char *srcJpgFileName);
 int sample_updateTagData(const char *srcJpgFileName, const char *outJpgFileName);
 int sample_saveThumbnail(const char *srcJpgFileName, const char *outFileName);
+
+void reportResult(int result, const char* filename)
+{
+    // check result status
+    switch (result) {
+    case 0: // no IFDs
+        printf("[%s] does not seem to contain the Exif segment.\n", filename);
+        break;
+    case ERR_READ_FILE:
+        printf("failed to open or read [%s].\n", filename);
+        break;
+    case ERR_INVALID_JPEG:
+        printf("[%s] is not a valid JPEG file.\n", filename);
+        break;
+    case ERR_INVALID_APP1HEADER:
+        printf("[%s] does not have valid Exif segment header.\n", filename);
+        break;
+    case ERR_INVALID_IFD:
+        printf("[%s] contains one or more IFD errors. use -v for details.\n", filename);
+        break;
+    default:
+        printf("[%s] createIfdTableArray: result=%d\n", filename, result);
+        break;
+    }
+}
 
 // sample
 int main(int ac, char *av[])
@@ -40,6 +69,7 @@ int main(int ac, char *av[])
     void **ifdArray;
     TagNodeInfo *tag;
     int i, result;
+    int addFlag = 0;
     int infoFlag = 0;
     int removeFlag = 0;
     int stripFlag = 0;
@@ -53,7 +83,7 @@ int main(int ac, char *av[])
 #endif
 
     if (ac < 2) {
-        printf("usage: %s <JPEG FileName> [-i]nfo [-r]emove [-s]trip [-t]humbnail [-u]pdate [-v]erbose\n", av[0]);
+        printf("usage: %s <JPEG FileName> [-a]dd [-i]nfo [-r]emove [-s]trip [-t]humbnail [-u]pdate [-v]erbose\n", av[0]);
         return 0;
     }
 
@@ -62,6 +92,9 @@ int main(int ac, char *av[])
         const char* arg = av[i];
         if (arg[0] == '-' || arg[0] == '/') {
             switch (arg[1]) {
+                case 'a':
+                    addFlag = 1;;
+                    break;
                 case 'i':
                     infoFlag = 1;
                     break;
@@ -88,29 +121,9 @@ int main(int ac, char *av[])
     }
 
     // parse the JPEG header and create the pointer array of the IFD tables
-    ifdArray = createIfdTableArray(av[1], &result);
-
-    // check result status
-    switch (result) {
-    case 0: // no IFDs
-        printf("[%s] does not seem to contain the Exif segment.\n", av[1]);
-        break;
-    case ERR_READ_FILE:
-        printf("failed to open or read [%s].\n", av[1]);
-        break;
-    case ERR_INVALID_JPEG:
-        printf("[%s] is not a valid JPEG file.\n", av[1]);
-        break;
-    case ERR_INVALID_APP1HEADER:
-        printf("[%s] does not have valid Exif segment header.\n", av[1]);
-        break;
-    case ERR_INVALID_IFD:
-        printf("[%s] contains one or more IFD errors. use -v for details.\n", av[1]);
-        break;
-    default:
-        printf("[%s] createIfdTableArray: result=%d\n", av[1], result);
-        break;
-    }
+    const char* filename = av[1];
+    ifdArray = createIfdTableArray(filename, &result);
+    reportResult(result, filename);
 
     if (!ifdArray) {
         return 0;
@@ -161,32 +174,38 @@ int main(int ac, char *av[])
 
     // sample function A: remove the Exif segment in a JPEG file
     if (stripFlag) {
-        result = sample_removeExifSegment(av[1], "removeExif.jpg");
-        printf("sample_removeExifSegment(%s)=%d\n", av[1], result);
+        result = sample_removeExifSegment(filename, "removeExif.jpg");
+        printf("sample_removeExifSegment(%s)=%d\n", filename, result);
     }
 
     // sample function B: remove sensitive Exif data in a JPEG file
     if (removeFlag) {
-        result = sample_removeSensitiveData(av[1], "removeSensitive.jpg");
-        printf("sample_removeSensitiveData(%s)=%d\n", av[1], result);
+        result = sample_removeSensitiveData(filename, "removeSensitive.jpg");
+        printf("sample_removeSensitiveData(%s)=%d\n", filename, result);
     }
 
     // sample function C: check if "GPSLatitude" tag exists in GPS IFD
     if (infoFlag) {
-        result = sample_queryTagExists(av[1]);
-        printf("sample_queryTagExists(%s)=%d\n", av[1], result);
+        result = sample_queryTagExists(filename);
+        printf("sample_queryTagExists(%s)=%d\n", filename, result);
     }
 
     // sample function D: Update the value of "Make" tag in 0th IFD
     if (updateFlag) {
-        result = sample_updateTagData(av[1], "updateTag.jpg");
-        printf("sample_updateTagData(%s)=%d\n", av[1], result);
+        result = sample_updateTagData(filename, "updateTag.jpg");
+        printf("sample_updateTagData(%s)=%d\n", filename, result);
     }
 
     // sample function E: Write Exif thumbnail data to file
     if (thumbnailFlag) {
-        result = sample_saveThumbnail(av[1], "thumbnail.jpg");
-        printf("sample_saveThumbnail(%s)=%d\n", av[1], result);
+        result = sample_saveThumbnail(filename, "thumbnail.jpg");
+        printf("sample_saveThumbnail(%s)=%d\n", filename, result);
+    }
+
+    // sample function F: Add Exif thumbnail data to file
+    if (addFlag) {
+        result = sample_addThumbnail(filename, "thumbnail.jpg", "withthumbnail.jpg");
+        printf("sample_addThumbnail(%s)=%d\n", filename, result);
     }
 
     return result;
@@ -204,6 +223,73 @@ int sample_removeExifSegment(const char *srcJpgFileName, const char *outJpgFileN
     if (sts <= 0) {
         printf("removeExifSegmentFromJPEGFile: ret=%d\n", sts);
     }
+    return sts;
+}
+
+/**
+ * sample_addThumbnail()
+ *
+ * remove sensitive Exif data in a JPEG file
+ *
+ */
+const uint8_t JFIF_header[] =
+{
+    0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46,
+    0x00, 0x01, 0x01, 0x00, 0x00, 0x01, 0x00, 0x01
+};
+int sample_addThumbnail(const char *srcJpgFileName, const char*srcThumbFileName, const char *outJpgFileName)
+{
+    // First try to read in thumbnail file
+    FILE* fp = fopen(srcThumbFileName, "rb");
+    if (fp == NULL) {
+        printf("sampleAddThumbnail: Can't open file [%s]\n", srcThumbFileName);
+        return ERR_NOT_EXIST;
+    }
+    // Get size of file
+    fseek(fp, 0L, SEEK_END);
+    size_t len = ftell(fp);
+    fseek(fp, 0L, SEEK_SET);
+
+    printf("sample_addThumbnail: len = %zu\n", len);
+    uint8_t* buf = (uint8_t*) malloc(len);
+    if (buf == NULL) {
+        return ERR_MEMALLOC;        
+    }
+    size_t numread = fread(buf, 1, len, fp);
+    if (numread != len) {
+        return ERR_READ_FILE;
+    }
+    fclose(fp);
+
+    uint8_t* thumb = buf;
+    if (memcmp(buf + 2, JFIF_header, sizeof(JFIF_header))) {
+        thumb += sizeof(JFIF_header);
+        len -= sizeof(JFIF_header);
+        thumb[0] = 0xff;
+        thumb[1] = 0xd8;
+    }
+
+    int sts;
+    void* ifdTable[32];
+    int count = fillIfdTableArray(srcJpgFileName, ifdTable);
+    if (count <= 0) {
+        printf("createIfdTableArray: ret=%d\n", count);
+        return count;
+    }
+
+    // add ThumbnailData
+    sts = setThumbnailDataOnIfdTableArray(ifdTable, thumb, len);
+    if (sts < 0) {
+        printf("setThumbnailDataOnIfdTableArray: ret=%d\n", sts);
+    }
+    free(buf);
+
+    // update the Exif segment
+    sts = updateExifSegmentInJPEGFile(srcJpgFileName, outJpgFileName, ifdTable);
+    if (sts < 0) {
+        printf("updateExifSegmentInJPEGFile: ret=%d\n", sts);
+    }
+    freeIfdTables(ifdTable);
     return sts;
 }
 

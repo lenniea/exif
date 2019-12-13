@@ -218,13 +218,15 @@ DONE:
 }
 
 /**
- * createIfdTableArray()
+ * fillIfdTableArray()
  *
- * Parse the JPEG header and create the pointer array of the IFD tables
+ * Parse the JPEG header and fill in the IFD table
  *
  * parameters
  *  [in] JPEGFileName : target JPEG file
- *  [out] result : result status value 
+ *  [out] ifdArray[32] : array of IfdTable pointers
+ *
+ * return
  *   n: number of IFD tables
  *   0: the Exif segment is not found
  *  -n: error
@@ -232,25 +234,19 @@ DONE:
  *      ERR_INVALID_JPEG
  *      ERR_INVALID_APP1HEADER
  *      ERR_INVALID_IFD
- *
- * return
- *   NULL: error or no Exif segment
- *  !NULL: pointer array of the IFD tables
  */
-void **createIfdTableArray(const char *JPEGFileName, int *result)
+int fillIfdTableArray(const char *JPEGFileName, void* ifdArray[32])
 {
     #define FMT_ERR "critical error in %s IFD\n"
 
-    int i, sts = 1, ifdCount = 0;
+    int sts = 1, ifdCount = 0;
     unsigned int ifdOffset;
     FILE *fp = NULL;
     TagNode *tag;
-    void **ppIfdArray = NULL;
-    void *ifdArray[32];
     IfdTable *ifd_0th, *ifd_exif, *ifd_gps, *ifd_io, *ifd_1st;
 
     ifd_0th = ifd_exif = ifd_gps = ifd_io = ifd_1st = NULL;
-    memset(ifdArray, 0, sizeof(ifdArray));
+    memset(ifdArray, 0, sizeof(void*) * 32);
 
     fp = fopen(JPEGFileName, "rb");
     if (!fp) {
@@ -330,6 +326,9 @@ void **createIfdTableArray(const char *JPEGFileName, int *result)
 
     // for 1st IFD
     ifdOffset = ifd_0th->nextIfdOffset;
+    if (Verbose) {
+        printf("1st IFD ifdOffset=%u\n", ifdOffset);
+    }
     if (ifdOffset != 0) {
         ifd_1st = parseIFD(fp, ifdOffset, IFD_1ST);
         if (ifd_1st) {
@@ -343,19 +342,63 @@ void **createIfdTableArray(const char *JPEGFileName, int *result)
     }
 
 DONE:
-    *result = (sts <= 0) ? sts : ifdCount;
-    if (ifdCount > 0) {
-        // +1 extra NULL element to the array 
-        ppIfdArray = (void**)malloc(sizeof(void*)*(ifdCount+1));
-        memset(ppIfdArray, 0, sizeof(void*)*(ifdCount+1));
-        for (i = 0; ifdArray[i] != NULL; i++) {
-            ppIfdArray[i] = ifdArray[i];
-        }
-    }
     if (fp) {
         fclose(fp);
     }
+    return (sts <= 0) ? sts : ifdCount;
+}
+
+/**
+ * createIfdTableArray()
+ *
+ * Parse the JPEG header and create the pointer array of the IFD tables
+ *
+ * parameters
+ *  [in] JPEGFileName : target JPEG file
+ *  [out] result : result status value 
+ *   n: number of IFD tables
+ *   0: the Exif segment is not found
+ *  -n: error
+ *      ERR_READ_FILE
+ *      ERR_INVALID_JPEG
+ *      ERR_INVALID_APP1HEADER
+ *      ERR_INVALID_IFD
+ *
+ * return
+ *   NULL: error or no Exif segment
+ *  !NULL: pointer array of the IFD tables
+ */
+void **createIfdTableArray(const char *JPEGFileName, int *result)
+{
+    void* ifdTable[32];
+    void** ppIfdArray = NULL;
+    int i, count = fillIfdTableArray(JPEGFileName, ifdTable);
+    *result = count;
+    if (count > 0) {
+        // +1 extra NULL element to the array 
+        ppIfdArray = (void**)malloc(sizeof(void*)*(count+1));
+        memset(ppIfdArray, 0, sizeof(void*)*(count+1));
+        for (i = 0; ifdTable[i] != NULL; i++) {
+            ppIfdArray[i] = ifdTable[i];
+        }
+    }
     return ppIfdArray;
+}
+
+/**
+ * freeIfdTables()
+ *
+ * Free the pointer array of the IFD tables
+ *
+ * parameters
+ *  [in] ifdArray : address of the IFD array
+ */
+void freeIfdTables(void* ifdArray[32])
+{
+    int i;
+    for (i = 0; ifdArray[i] != NULL; i++) {
+        freeIfdTable(ifdArray[i]);
+    }
 }
 
 /**
@@ -368,10 +411,7 @@ DONE:
  */
 void freeIfdTableArray(void **ifdArray)
 {
-    int i;
-    for (i = 0; ifdArray[i] != NULL; i++) {
-        freeIfdTable(ifdArray[i]);
-    }
+    freeIfdTables(ifdArray);
     free(ifdArray);
 }
 
@@ -1031,7 +1071,14 @@ int setThumbnailDataOnIfdTableArray(void **ifdTableArray,
     }
     ifd = getIfdTableFromIfdTableArray(ifdTableArray, IFD_1ST);
     if (!ifd) {
-        return ERR_NOT_EXIST;
+        int count = countIfdTableOnIfdTableArray(ifdTableArray);
+        void* ifd1st = createIfdTable(IFD_1ST, 0, 0);
+        printf("count=%d ifd1st=%p\n", count, ifd1st);
+        ifdTableArray[count] = ifd1st;
+        ifd = getIfdTableFromIfdTableArray(ifdTableArray, IFD_1ST);
+        if (!ifd) {
+            return ERR_NOT_EXIST;
+        }
     }
     if (ifd->p) {
         free(ifd->p);
