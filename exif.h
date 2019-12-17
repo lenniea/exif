@@ -24,6 +24,7 @@
   #define new ::new(_NORMAL_BLOCK, __FILE__, __LINE__)
 #endif
 #endif
+#include <stdint.h>
 
 /**
  *   Typical Usage:
@@ -84,12 +85,12 @@ typedef enum {
 // Tag info structure
 typedef struct _tagNodeInfo TagNodeInfo;
 struct _tagNodeInfo {
-    unsigned short tagId;    // tag ID (e.g. TAG_Model = 0x0110)
-    unsigned short type;     // data Type (e.g. TYPE_ASCII = 2)
+    uint16_t tagId;    // tag ID (e.g. TAG_Model = 0x0110)
+    uint16_t type;     // data Type (e.g. TYPE_ASCII = 2)
     unsigned int count;      // count of the data
     unsigned int *numData;   // numeric data array
-    unsigned char *byteData; // byte data array
-    unsigned short error;    // 0: no error 1: parse error
+    uint8_t *byteData; // byte data array
+    uint16_t error;    // 0: no error 1: parse error
 };
 /**
  * Note:
@@ -275,7 +276,7 @@ void dumpIfdTableArray(void **ifdArray);
  */
 TagNodeInfo *getTagInfo(void **ifdArray,
                        IFD_TYPE ifdType,
-                       unsigned short tagId);
+                       uint16_t tagId);
 
 /**
  * getTagInfoFromIfd()
@@ -290,7 +291,7 @@ TagNodeInfo *getTagInfo(void **ifdArray,
  *  NULL: tag is not found
  *  !NULL: address of the TagNodeInfo structure
  */
-TagNodeInfo *getTagInfoFromIfd(void *ifd, unsigned short tagId);
+TagNodeInfo *getTagInfoFromIfd(void *ifd, uint16_t tagId);
 
 /**
  * freeTagInfo()
@@ -318,7 +319,7 @@ void freeTagInfo(void *tag);
  */
 int queryTagNodeIsExist(void **ifdTableArray,
                         IFD_TYPE ifdType,
-                        unsigned short tagId);
+                        uint16_t tagId);
 
 /**
  * createTagInfo()
@@ -340,8 +341,8 @@ int queryTagNodeIsExist(void **ifdTableArray,
  *  NULL: error
  * !NULL: address of the newly created TagNodeInfo
  */
-TagNodeInfo *createTagInfo(unsigned short tagId,
-                           unsigned short type,
+TagNodeInfo *createTagInfo(uint16_t tagId,
+                           uint16_t type,
                            unsigned int count,
                            int *pResult);
 
@@ -400,7 +401,7 @@ void **insertIfdTableToIfdTableArray(void **ifdTableArray,
  */
 int removeTagNodeFromIfdTableArray(void **ifdTableArray,
                              IFD_TYPE ifdType,
-                             unsigned short tagId);
+                             uint16_t tagId);
 
 /**
  * insertTagNodeToIfdTableArray()
@@ -450,7 +451,7 @@ int insertTagNodeToIfdTableArray(void **ifdTableArray,
  * This function returns the copy of the thumbnail data.
  * The caller must free it.
  */
-unsigned char *getThumbnailDataOnIfdTableArray(void **ifdTableArray,
+uint8_t *getThumbnailDataOnIfdTableArray(void **ifdTableArray,
                                                unsigned int *pLength,
                                                int *pResult);
 
@@ -476,7 +477,7 @@ unsigned char *getThumbnailDataOnIfdTableArray(void **ifdTableArray,
  *      ERR_UNKNOWN
  */
 int setThumbnailDataOnIfdTableArray(void **ifdTableArray,
-                                    unsigned char *pData,
+                                    uint8_t *pData,
                                     unsigned int length);
 
 void getIfdTableDump(void *pIfd, char **pp);
