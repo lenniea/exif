@@ -2604,6 +2604,7 @@ static int getApp1StartOffset(FILE *fp,
     int pos;
     uint8_t buf[64];
     uint16_t len, marker;
+	uint32_t exif_pos = 0;
     if (!fp) {
         return ERR_READ_FILE;
     }
@@ -2643,7 +2644,7 @@ static int getApp1StartOffset(FILE *fp,
             if (marker == 0xFFDB && pDQTOffset != NULL) {
                 *pDQTOffset = pos - sizeof(short);
             }
-            break;
+			break;
         }
         // read the length of the segment
         if (fread(&len, 1, sizeof(short), fp) < sizeof(short)) {
@@ -2654,18 +2655,25 @@ static int getApp1StartOffset(FILE *fp,
         }
         // if is not a APP1 segment, move to next segment
         if (marker != 0xFFE1) {
+			if (exif_pos != 0) {
+				break;
+			}
             if (fseek(fp, len - sizeof(short), SEEK_CUR) != 0) {
                 return ERR_INVALID_JPEG;
             }
         } else {
             // check if it is the Exif segment
-            if (fread(&buf, 1, App1IDStringLength, fp) < App1IDStringLength) {
+			size_t bytesread = fread(buf, 1, App1IDStringLength + 4, fp);
+            if (bytesread < App1IDStringLength) {
                 return ERR_READ_FILE;
             }
             if (memcmp(buf, App1IDString, App1IDStringLength) == 0) {
                 // return the start offset of the Exif segment
-                return pos - sizeof(short);
-            }
+                exif_pos =  pos - sizeof(short);
+			}
+			if (Verbose) {
+				printf("APP1 %c%c%c%c %u of %u len=%u\n", buf[0], buf[1], buf[2], buf[3], buf[6]+1, buf[7]+1, len - 2);
+			}
             // if is not a Exif segment, move to next segment
             if (fseek(fp, pos, SEEK_SET) != 0 ||
                 fseek(fp, len, SEEK_CUR) != 0) {
@@ -2681,7 +2689,7 @@ static int getApp1StartOffset(FILE *fp,
         }
         pos = ftell(fp);
     }
-    return 0; // not found the Exif segment
+    return exif_pos; // return Exif segment if found
 }
 
 /**
