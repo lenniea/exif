@@ -234,7 +234,7 @@ int sample_removeExifSegment(const char *srcJpgFileName, const char *outJpgFileN
  */
 const uint8_t JFIF_header[] =
 {
-    0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46,
+    0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46,
     0x00, 0x01, 0x01, 0x00, 0x00, 0x01, 0x00, 0x01
 };
 int sample_addThumbnail(const char *srcJpgFileName, const char*srcThumbFileName, const char *outJpgFileName)
@@ -250,7 +250,7 @@ int sample_addThumbnail(const char *srcJpgFileName, const char*srcThumbFileName,
     size_t len = ftell(fp);
     fseek(fp, 0L, SEEK_SET);
 
-    printf("sample_addThumbnail: len = %zu\n", len);
+    printf("sample_addThumbnail: len = %u\n", len);
     uint8_t* buf = (uint8_t*) malloc(len);
     if (buf == NULL) {
         return ERR_MEMALLOC;        
@@ -262,7 +262,7 @@ int sample_addThumbnail(const char *srcJpgFileName, const char*srcThumbFileName,
     fclose(fp);
 
     uint8_t* thumb = buf;
-    if (memcmp(buf + 2, JFIF_header, sizeof(JFIF_header))) {
+    if (memcmp(buf, JFIF_header, sizeof(JFIF_header) - 8) == 0) {
         thumb += sizeof(JFIF_header);
         len -= sizeof(JFIF_header);
         thumb[0] = 0xff;
