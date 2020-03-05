@@ -14,6 +14,16 @@
  * limitations under the License.
  */
 
+//
+// Links related to EXIF, TIFF 6.0 and MPO (Multi Picture Object) format
+//
+// https://www.exif.org/Exif2-2.PDF
+// https://www.itu.int/itudoc/itu-t/com16/tiff-fx/docs/tiff6.pdf
+//
+// https://en.wikipedia.org/wiki/JPEG#JPEG_Multi-Picture_Format
+// http://www.cmsoft.com.br/downloads/cmsoft-stereoscopic-picture-editor-converter/3d-picture-gallery/
+// https://dmitrybrant.com/2011/02/08/the-fujifilm-mpo-3d-photo-format
+//
 #ifdef _MSC_VER
 #include <windows.h>
 #define vsnprintf _vsnprintf
