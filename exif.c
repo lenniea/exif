@@ -31,6 +31,9 @@
 
 #define VERSION  "1.0.1"
 
+#define APP1_MARKER		0xFFE1
+#define APP2_MARKER		0xFFE2
+
 // TIFF Header
 typedef struct _tiff_Header {
     uint16_t byteOrder;
@@ -97,7 +100,7 @@ static int writeExifSegment(FILE *fp, void **ifdTableArray);
 static int removeTagOnIfd(void *pIfd, uint16_t tagId);
 static int fixLengthAndOffsetInIfdTables(void **ifdTableArray);
 static int setSingleNumDataToTag(TagNode *tag, unsigned int value);
-static int getApp1StartOffset(FILE *fp, const char *App1IDString,
+static int getAppNStartOffset(FILE *fp, uint16_t appMarkerN, const char *App1IDString,
                               size_t App1IDStringLength, int *pDQTOffset);
 static uint16_t swab16(uint16_t us);
 static void PRINTF(char **ms, const char *fmt, ...);
@@ -1267,7 +1270,7 @@ int removeAdobeMetadataSegmentFromJPEGFile(const char *inJPEGFileName,
         sts = ERR_READ_FILE;
         goto DONE;
     }
-    sts = getApp1StartOffset(fpr, ADOBE_METADATA_ID, ADOBE_METADATA_ID_LEN, NULL);
+	sts = getAppNStartOffset(fpr, APP1_MARKER, ADOBE_METADATA_ID, ADOBE_METADATA_ID_LEN, NULL);
     if (sts <= 0) { // target segment is not exist or something error
         goto DONE;
     }
@@ -2593,7 +2596,8 @@ static int readApp1SegmentHeader(FILE *fp)
  *   0: the Exif segment is not found
  *  -n: error
  */
-static int getApp1StartOffset(FILE *fp,
+static int getAppNStartOffset(FILE *fp,
+							  uint16_t appMarkerN,
                               const char *App1IDString,
                               size_t App1IDStringLength,
                               int *pDQTOffset)
@@ -2643,8 +2647,8 @@ static int getApp1StartOffset(FILE *fp,
             // found DQT
             if (marker == 0xFFDB && pDQTOffset != NULL) {
                 *pDQTOffset = pos - sizeof(short);
+				break;
             }
-			break;
         }
         // read the length of the segment
         if (fread(&len, 1, sizeof(short), fp) < sizeof(short)) {
@@ -2653,8 +2657,8 @@ static int getApp1StartOffset(FILE *fp,
         if (systemIsLittleEndian()) {
             len = swab16(len);
         }
-        // if is not a APP1 segment, move to next segment
-        if (marker != 0xFFE1) {
+        // if is not a APPn segment, move to next segment
+		if (marker != appMarkerN) {
 			if (exif_pos != 0) {
 				break;
 			}
@@ -2672,7 +2676,14 @@ static int getApp1StartOffset(FILE *fp,
                 exif_pos =  pos - sizeof(short);
 			}
 			if (Verbose) {
-				printf("APP1 %c%c%c%c %u of %u len=%u\n", buf[0], buf[1], buf[2], buf[3], buf[6]+1, buf[7]+1, len - 2);
+				unsigned char c1 = buf[0];
+				unsigned char c2 = buf[1];
+				unsigned char c3 = buf[2];
+				unsigned char c4 = buf[3];
+				if (c4 < ' ') {
+					c4 = '?';
+				}
+				printf("APP%u %c%c%c%c len=%u\n", (appMarkerN - APP1_MARKER) + 1, c1, c2, c3, c4, len - 2);
 			}
             // if is not a Exif segment, move to next segment
             if (fseek(fp, pos, SEEK_SET) != 0 ||
@@ -2705,15 +2716,20 @@ static int init(FILE *fp)
     int sts, dqtOffset = -1;;
     setDefaultApp1SegmentHader();
     // get the offset of the Exif segment
-    sts = getApp1StartOffset(fp, EXIF_ID_STR, EXIF_ID_STR_LEN, &dqtOffset);
+	sts = getAppNStartOffset(fp, APP1_MARKER, EXIF_ID_STR, EXIF_ID_STR_LEN, &dqtOffset);
     if (sts < 0) { // error
         return sts;
     }
-    JpegDQTOffset = dqtOffset;
-    App1StartOffset = sts;
-    if (sts == 0) {
-        return sts;
-    }
+	JpegDQTOffset = dqtOffset;
+	App1StartOffset = sts;
+	if (sts == 0) {
+		return sts;
+	}
+
+	sts = getAppNStartOffset(fp, APP2_MARKER, EXIF_ID_STR, EXIF_ID_STR_LEN, NULL);
+	if (sts < 0) {
+
+	}
     // Load the segment header
     if (!readApp1SegmentHeader(fp)) {
         return ERR_INVALID_APP1HEADER;
