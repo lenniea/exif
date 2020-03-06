@@ -695,4 +695,28 @@ int removeAdobeMetadataSegmentFromJPEGFile(const char *inJPEGFileName,
 #define TAG_RelatedImageWidth            0x1001
 #define TAG_RelatedImageHeight           0x1002
 
+// MPO tags
+#define TAG_MPFVersion                   0xB000
+#define TAG_NumberOfImage                0xB001
+#define TAG_MPImageList                  0xB002
+#define TAG_ImageUIDList                 0xB003
+#define TAG_TotalFrames                  0xB004
+
+#define TAG_MPIndividualNum              0xB101
+
+#define TAG_PanOrientation               0xB201
+#define TAG_PanOverlapH                  0xB202
+#define TAG_PanOverlapV                  0xB203
+#define TAG_BaseViewpointNum             0xB204
+#define TAG_ConvergenceAngle             0xB205
+#define TAG_BaselineLength               0xB206
+#define TAG_VerticalDivergence           0xB207
+#define TAG_AxisDistanceX                0xB208
+#define TAG_AxisDistanceY                0xB209
+#define TAG_AxisDistanceZ                0xB20A
+#define TAG_YawAngle                     0xB20B
+#define TAG_PitchAngle                   0xB20C
+#define TAG_RollAngle                    0xB20D
+
+
 #endif // _EXIF_H_

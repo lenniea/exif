@@ -52,12 +52,12 @@ typedef struct _tiff_Header {
 } TIFF_HEADER;
 
 // APP1 Exif Segment Header
-typedef struct _App1_Header {
+typedef struct _App_Header {
     uint16_t marker;
     uint16_t length;
     char id[6]; // "Exif\0\0"
     TIFF_HEADER tiff;
-} APP1_HEADER;
+} APP_HEADER;
 
 // tag field in IFD
 typedef struct {
@@ -100,7 +100,7 @@ static void *parseIFD(FILE*, unsigned int, IFD_TYPE);
 static TagNode *getTagNodePtrFromIfd(IfdTable*, uint16_t);
 static TagNode *duplicateTagNode(TagNode*);
 static void freeTagNode(void*);
-static char *getTagName(int, uint16_t);
+static const char *getTagName(int, uint16_t);
 static int countIfdTableOnIfdTableArray(void **ifdTableArray);
 static IfdTable *getIfdTableFromIfdTableArray(void **ifdTableArray, IFD_TYPE ifdType);
 static void *createIfdTable(IFD_TYPE IfdType, uint16_t tagCount, unsigned int nextOfs);
@@ -119,7 +119,7 @@ static void _dumpIfdTable(void *pIfd, char **p);
 static int Verbose = 0;
 static int App1StartOffset = -1;
 static int JpegDQTOffset = -1;
-static APP1_HEADER App1Header;
+static APP_HEADER App1Header;
 
 // public funtions
 
@@ -1390,180 +1390,212 @@ static unsigned int fix_int(unsigned int ui)
 
 static int seekToRelativeOffset(FILE *fp, unsigned int ofs)
 {
-    static int start = offsetof(APP1_HEADER, tiff);
+    static int start = offsetof(APP_HEADER, tiff);
     return fseek(fp, (App1StartOffset + start) + ofs, SEEK_SET);
 }
 
-static char *getTagName(int ifdType, uint16_t tagId)
+static const char *getMPFTagName(int ifdType, uint16_t tagId)
 {
-    static char tagName[128];
     if (ifdType == IFD_0TH || ifdType == IFD_1ST || ifdType == IFD_EXIF) {
-        strcpy(tagName,
-            (tagId == TAG_ImageWidth) ? "ImageWidth" :
-            (tagId == TAG_ImageLength) ? "ImageLength" :
-            (tagId == TAG_BitsPerSample) ? "BitsPerSample" :
-            (tagId == TAG_Compression) ? "Compression" :
-            (tagId == TAG_PhotometricInterpretation) ? "PhotometricInterpretation" :
-            (tagId == TAG_Orientation) ? "Orientation" :
-            (tagId == TAG_SamplesPerPixel) ? "SamplesPerPixel" :
-            (tagId == TAG_PlanarConfiguration) ? "PlanarConfiguration" :
-            (tagId == TAG_YCbCrSubSampling) ? "YCbCrSubSampling" :
-            (tagId == TAG_YCbCrPositioning) ? "YCbCrPositioning" :
-            (tagId == TAG_XResolution) ? "XResolution" :
-            (tagId == TAG_YResolution) ? "YResolution" :
-            (tagId == TAG_ResolutionUnit) ? "ResolutionUnit" :
+        switch (tagId) {
+            case TAG_MPFVersion: return "MPFVersion";
+            case TAG_NumberOfImage: return "NumberOfImage";
+            case TAG_MPImageList: return "MPImageList";
+            case TAG_ImageUIDList: return "ImageUIDList";
+            case TAG_TotalFrames: return "TotalFrames";
 
-            (tagId == TAG_StripOffsets) ? "StripOffsets" :
-            (tagId == TAG_RowsPerStrip) ? "RowsPerStrip" :
-            (tagId == TAG_StripByteCounts) ? "StripByteCounts" :
-            (tagId == TAG_JPEGInterchangeFormat) ? "JPEGInterchangeFormat" :
-            (tagId == TAG_JPEGInterchangeFormatLength) ? "JPEGInterchangeFormatLength" :
-
-            (tagId == TAG_TransferFunction) ? "TransferFunction" :
-            (tagId == TAG_WhitePoint) ? "WhitePoint" :
-            (tagId == TAG_PrimaryChromaticities) ? "PrimaryChromaticities" :
-            (tagId == TAG_YCbCrCoefficients) ? "YCbCrCoefficients" :
-            (tagId == TAG_ReferenceBlackWhite) ? "ReferenceBlackWhite" :
-
-            (tagId == TAG_DateTime) ? "DateTime" :
-            (tagId == TAG_ImageDescription) ? "ImageDescription" :
-            (tagId == TAG_Make) ? "Make" :
-            (tagId == TAG_Model) ? "Model" :
-            (tagId == TAG_Software) ? "Software" :
-            (tagId == TAG_Artist) ? "Artist" :
-            (tagId == TAG_Copyright) ? "Copyright" :
-            (tagId == TAG_ExifIFDPointer) ? "ExifIFDPointer" :
-            (tagId == TAG_GPSInfoIFDPointer) ? "GPSInfoIFDPointer":
-            (tagId == TAG_InteroperabilityIFDPointer) ? "InteroperabilityIFDPointer" :
-
-            (tagId == TAG_Rating) ? "Rating" :
-
-            (tagId == TAG_ExifVersion) ? "ExifVersion" :
-            (tagId == TAG_FlashPixVersion) ? "FlashPixVersion" :
-
-            (tagId == TAG_ColorSpace) ? "ColorSpace" :
-
-            (tagId == TAG_ComponentsConfiguration) ? "ComponentsConfiguration" :
-            (tagId == TAG_CompressedBitsPerPixel) ? "CompressedBitsPerPixel" :
-            (tagId == TAG_PixelXDimension) ? "PixelXDimension" :
-            (tagId == TAG_PixelYDimension) ? "PixelYDimension" :
-
-            (tagId == TAG_MakerNote) ? "MakerNote" :
-            (tagId == TAG_UserComment) ? "UserComment" :
-
-            (tagId == TAG_RelatedSoundFile) ? "RelatedSoundFile" :
-
-            (tagId == TAG_DateTimeOriginal) ? "DateTimeOriginal" :
-            (tagId == TAG_DateTimeDigitized) ? "DateTimeDigitized" :
-            (tagId == TAG_SubSecTime) ? "SubSecTime" :
-            (tagId == TAG_SubSecTimeOriginal) ? "SubSecTimeOriginal" :
-            (tagId == TAG_SubSecTimeDigitized) ? "SubSecTimeDigitized" :
-
-            (tagId == TAG_ExposureTime) ? "ExposureTime" :
-            (tagId == TAG_FNumber) ? "FNumber" :
-            (tagId == TAG_ExposureProgram) ? "ExposureProgram" :
-            (tagId == TAG_SpectralSensitivity) ? "SpectralSensitivity" :
-            (tagId == TAG_PhotographicSensitivity) ? "PhotographicSensitivity" :
-            (tagId == TAG_OECF) ? "OECF" :
-            (tagId == TAG_SensitivityType) ? "SensitivityType" :
-            (tagId == TAG_StandardOutputSensitivity) ? "StandardOutputSensitivity" :
-            (tagId == TAG_RecommendedExposureIndex) ? "RecommendedExposureIndex" :
-            (tagId == TAG_ISOSpeed) ? "ISOSpeed" :
-            (tagId == TAG_ISOSpeedLatitudeyyy) ? "ISOSpeedLatitudeyyy" :
-            (tagId == TAG_ISOSpeedLatitudezzz) ? "ISOSpeedLatitudezzz" :
-
-            (tagId == TAG_ShutterSpeedValue) ? "ShutterSpeedValue" :
-            (tagId == TAG_ApertureValue) ? "ApertureValue" :
-            (tagId == TAG_BrightnessValue) ? "BrightnessValue" :
-            (tagId == TAG_ExposureBiasValue) ? "ExposureBiasValue" :
-            (tagId == TAG_MaxApertureValue) ? "MaxApertureValue" :
-            (tagId == TAG_SubjectDistance) ? "SubjectDistance" :
-            (tagId == TAG_MeteringMode) ? "MeteringMode" :
-            (tagId == TAG_LightSource) ? "LightSource" :
-            (tagId == TAG_Flash) ? "Flash" :
-            (tagId == TAG_FocalLength) ? "FocalLength" :
-            (tagId == TAG_SubjectArea) ? "SubjectArea" :
-            (tagId == TAG_FlashEnergy) ? "FlashEnergy" :
-            (tagId == TAG_SpatialFrequencyResponse) ? "SpatialFrequencyResponse" :
-            (tagId == TAG_FocalPlaneXResolution) ? "FocalPlaneXResolution" :
-            (tagId == TAG_FocalPlaneYResolution) ? "FocalPlaneYResolution" :
-            (tagId == TAG_FocalPlaneResolutionUnit) ? "FocalPlaneResolutionUnit" :
-            (tagId == TAG_SubjectLocation) ? "SubjectLocation" :
-            (tagId == TAG_ExposureIndex) ? "ExposureIndex" :
-            (tagId == TAG_SensingMethod) ? "SensingMethod" :
-            (tagId == TAG_FileSource) ? "FileSource" :
-            (tagId == TAG_SceneType) ? "SceneType" :
-            (tagId == TAG_CFAPattern) ? "CFAPattern" :
-
-            (tagId == TAG_CustomRendered) ? "CustomRendered" :
-            (tagId == TAG_ExposureMode) ? "ExposureMode" :
-            (tagId == TAG_WhiteBalance) ? "WhiteBalance" :
-            (tagId == TAG_DigitalZoomRatio) ? "DigitalZoomRatio" :
-            (tagId == TAG_FocalLengthIn35mmFormat) ? "FocalLengthIn35mmFormat" :
-            (tagId == TAG_SceneCaptureType) ? "SceneCaptureType" :
-            (tagId == TAG_GainControl) ? "GainControl" :
-            (tagId == TAG_Contrast) ? "Contrast" :
-            (tagId == TAG_Saturation) ? "Saturation" :
-            (tagId == TAG_Sharpness) ? "Sharpness" :
-            (tagId == TAG_DeviceSettingDescription) ? "DeviceSettingDescription" :
-            (tagId == TAG_SubjectDistanceRange) ? "SubjectDistanceRange" :
-
-            (tagId == TAG_ImageUniqueID) ? "ImageUniqueID" :
-            (tagId == TAG_CameraOwnerName) ? "CameraOwnerName" :
-            (tagId == TAG_BodySerialNumber) ? "BodySerialNumber" :
-            (tagId == TAG_LensSpecification) ? "LensSpecification" :
-            (tagId == TAG_LensMake) ? "LensMake" :
-            (tagId == TAG_LensModel) ? "LensModel" :
-            (tagId == TAG_LensSerialNumber) ? "LensSerialNumber" :
-            (tagId == TAG_Gamma) ? "Gamma" :
-            (tagId == TAG_PrintIM) ? "PrintIM" :
-            (tagId == TAG_Padding) ? "Padding" :
-            "(unknown)");
-    } else if (ifdType == IFD_GPS) {
-        strcpy(tagName,
-            (tagId == TAG_GPSVersionID) ? "GPSVersionID" :
-            (tagId == TAG_GPSLatitudeRef) ? "GPSLatitudeRef" :
-            (tagId == TAG_GPSLatitude) ? "GPSLatitude" :
-            (tagId == TAG_GPSLongitudeRef) ? "GPSLongitudeRef" :
-            (tagId == TAG_GPSLongitude) ? "GPSLongitude" :
-            (tagId == TAG_GPSAltitudeRef) ? "GPSAltitudeRef" :
-            (tagId == TAG_GPSAltitude) ? "GPSAltitude" :
-            (tagId == TAG_GPSTimeStamp) ? "GPSTimeStamp" :
-            (tagId == TAG_GPSSatellites) ? "GPSSatellites" :
-            (tagId == TAG_GPSStatus) ? "GPSStatus" :
-            (tagId == TAG_GPSMeasureMode) ? "GPSMeasureMode" :
-            (tagId == TAG_GPSDOP) ? "GPSDOP" :
-            (tagId == TAG_GPSSpeedRef) ? "GPSSpeedRef" :
-            (tagId == TAG_GPSSpeed) ? "GPSSpeed" :
-            (tagId == TAG_GPSTrackRef) ? "GPSTrackRef" :
-            (tagId == TAG_GPSTrack) ? "GPSTrack" :
-            (tagId == TAG_GPSImgDirectionRef) ? "GPSImgDirectionRef" :
-            (tagId == TAG_GPSImgDirection) ? "GPSImgDirection" :
-            (tagId == TAG_GPSMapDatum) ? "GPSMapDatum" :
-            (tagId == TAG_GPSDestLatitudeRef) ? "GPSDestLatitudeRef" :
-            (tagId == TAG_GPSDestLatitude) ? "GPSDestLatitude" :
-            (tagId == TAG_GPSDestLongitudeRef) ? "GPSDestLongitudeRef" :
-            (tagId == TAG_GPSDestLongitude) ? "GPSDestLongitude" :
-            (tagId == TAG_GPSBearingRef) ? "GPSBearingRef" :
-            (tagId == TAG_GPSBearing) ? "GPSBearing" :
-            (tagId == TAG_GPSDestDistanceRef) ? "GPSDestDistanceRef" :
-            (tagId == TAG_GPSDestDistance) ? "GPSDestDistance" :
-            (tagId == TAG_GPSProcessingMethod) ? "GPSProcessingMethod" :
-            (tagId == TAG_GPSAreaInformation) ? "GPSAreaInformation" :
-            (tagId == TAG_GPSDateStamp) ? "GPSDateStamp" :
-            (tagId == TAG_GPSDifferential) ? "GPSDifferential" :
-            (tagId == TAG_GPSHPositioningError) ? "GPSHPositioningError" :
-            "(unknown)");
-    } else if (ifdType == IFD_IO) {
-        strcpy(tagName, 
-            (tagId == TAG_InteroperabilityIndex) ? "InteroperabilityIndex" :
-            (tagId == TAG_InteroperabilityVersion) ? "InteroperabilityVersion" :
-            (tagId == TAG_RelatedImageFileFormat) ? "RelatedImageFileFormat" :
-            (tagId == TAG_RelatedImageWidth) ? "RelatedImageWidth" :
-            (tagId == TAG_RelatedImageHeight) ? "RelatedImageHeight" :
-            "(unknown)");
+            case TAG_MPIndividualNum: return "MPIndividualNum";
+            case TAG_PanOrientation: return "PanOrientation";
+            case TAG_PanOverlapH: return "PanOverlapH";
+            case TAG_PanOverlapV: return "PanOverlapV";
+            case TAG_BaseViewpointNum: return "BaseViewpointNum";
+            case TAG_ConvergenceAngle: return "ConvergenceAngle";
+            case TAG_BaselineLength: return "BaseLineLength";
+            case TAG_VerticalDivergence: return "VerticalDivergence";
+            case TAG_AxisDistanceX: return "AxisDistanceX";
+            case TAG_AxisDistanceY: return "AxisDistanceY";
+            case TAG_AxisDistanceZ: return "AxisDistanceZ";
+            case TAG_YawAngle: return "YawAngle";
+            case TAG_PitchAngle: return "PitchAngle";
+            case TAG_RollAngle: return "RollAngle";
+            default: ;
+        }
     }
-    return tagName;
+    return "(Unknown)";
+}
+
+static const char *getTagName(int ifdType, uint16_t tagId)
+{
+    if (ifdType == IFD_0TH || ifdType == IFD_1ST || ifdType == IFD_EXIF) {
+        switch (tagId) {
+            case TAG_ImageWidth: return "ImageWidth";
+            case TAG_ImageLength: return "ImageLength";
+            case TAG_BitsPerSample: return "BitsPerSample";
+            case TAG_Compression: return "Compression";
+            case TAG_PhotometricInterpretation: return "PhotometricInterpretation";
+            case TAG_Orientation: return "Orientation";
+            case TAG_SamplesPerPixel: return "SamplesPerPixel";
+            case TAG_PlanarConfiguration: return "PlanarConfiguration";
+            case TAG_YCbCrSubSampling: return "YCbCrSubSampling";
+            case TAG_YCbCrPositioning: return "YCbCrPositioning";
+            case TAG_XResolution: return "XResolution";
+            case TAG_YResolution: return "YResolution";
+            case TAG_ResolutionUnit: return "ResolutionUnit";
+
+            case TAG_StripOffsets: return "StripOffsets";
+            case TAG_RowsPerStrip: return "RowsPerStrip";
+            case TAG_StripByteCounts: return "StripByteCounts";
+            case TAG_JPEGInterchangeFormat: return "JPEGInterchangeFormat";
+            case TAG_JPEGInterchangeFormatLength: return "JPEGInterchangeFormatLength";
+
+            case TAG_TransferFunction: return "TransferFunction";
+            case TAG_WhitePoint: return "WhitePoint";
+            case TAG_PrimaryChromaticities: return "PrimaryChromaticities";
+            case TAG_YCbCrCoefficients: return "YCbCrCoefficients";
+            case TAG_ReferenceBlackWhite: return "ReferenceBlackWhite";
+
+            case TAG_DateTime: return "DateTime";
+            case TAG_ImageDescription: return "ImageDescription";
+            case TAG_Make: return "Make";
+            case TAG_Model: return "Model";
+            case TAG_Software: return "Software";
+            case TAG_Artist: return "Artist";
+            case TAG_Copyright: return "Copyright";
+            case TAG_ExifIFDPointer: return "ExifIFDPointer";
+			case TAG_GPSInfoIFDPointer: return "GPSInfoIFDPointer";
+            case TAG_InteroperabilityIFDPointer: return "InteroperabilityIFDPointer";
+
+            case TAG_Rating: return "Rating";
+
+            case TAG_ExifVersion: return "ExifVersion";
+            case TAG_FlashPixVersion: return "FlashPixVersion";
+
+            case TAG_ColorSpace: return "ColorSpace";
+
+            case TAG_ComponentsConfiguration: return "ComponentsConfiguration";
+            case TAG_CompressedBitsPerPixel: return "CompressedBitsPerPixel";
+            case TAG_PixelXDimension: return "PixelXDimension";
+            case TAG_PixelYDimension: return "PixelYDimension";
+
+            case TAG_MakerNote: return "MakerNote";
+            case TAG_UserComment: return "UserComment";
+
+            case TAG_RelatedSoundFile: return "RelatedSoundFile";
+
+            case TAG_DateTimeOriginal: return "DateTimeOriginal";
+            case TAG_DateTimeDigitized: return "DateTimeDigitized";
+            case TAG_SubSecTime: return "SubSecTime";
+            case TAG_SubSecTimeOriginal: return "SubSecTimeOriginal";
+            case TAG_SubSecTimeDigitized: return "SubSecTimeDigitized";
+
+            case TAG_ExposureTime: return "ExposureTime";
+            case TAG_FNumber: return "FNumber";
+            case TAG_ExposureProgram: return "ExposureProgram";
+            case TAG_SpectralSensitivity: return "SpectralSensitivity";
+            case TAG_PhotographicSensitivity: return "PhotographicSensitivity";
+            case TAG_OECF: return "OECF";
+            case TAG_SensitivityType: return "SensitivityType";
+            case TAG_StandardOutputSensitivity: return "StandardOutputSensitivity";
+            case TAG_RecommendedExposureIndex: return "RecommendedExposureIndex";
+            case TAG_ISOSpeed: return "ISOSpeed";
+            case TAG_ISOSpeedLatitudeyyy: return "ISOSpeedLatitudeyyy";
+            case TAG_ISOSpeedLatitudezzz: return "ISOSpeedLatitudezzz";
+
+            case TAG_ShutterSpeedValue: return "ShutterSpeedValue";
+            case TAG_ApertureValue: return "ApertureValue";
+            case TAG_BrightnessValue: return "BrightnessValue";
+            case TAG_ExposureBiasValue: return "ExposureBiasValue";
+            case TAG_MaxApertureValue: return "MaxApertureValue";
+            case TAG_SubjectDistance: return "SubjectDistance";
+            case TAG_MeteringMode: return "MeteringMode";
+            case TAG_LightSource: return "LightSource";
+            case TAG_Flash: return "Flash";
+            case TAG_FocalLength: return "FocalLength";
+            case TAG_SubjectArea: return "SubjectArea";
+            case TAG_FlashEnergy: return "FlashEnergy";
+            case TAG_SpatialFrequencyResponse: return "SpatialFrequencyResponse";
+            case TAG_FocalPlaneXResolution: return "FocalPlaneXResolution";
+            case TAG_FocalPlaneYResolution: return "FocalPlaneYResolution";
+            case TAG_FocalPlaneResolutionUnit: return "FocalPlaneResolutionUnit";
+            case TAG_SubjectLocation: return "SubjectLocation";
+            case TAG_ExposureIndex: return "ExposureIndex";
+            case TAG_SensingMethod: return "SensingMethod";
+            case TAG_FileSource: return "FileSource";
+            case TAG_SceneType: return "SceneType";
+            case TAG_CFAPattern: return "CFAPattern";
+
+            case TAG_CustomRendered: return "CustomRendered";
+            case TAG_ExposureMode: return "ExposureMode";
+            case TAG_WhiteBalance: return "WhiteBalance";
+            case TAG_DigitalZoomRatio: return "DigitalZoomRatio";
+            case TAG_FocalLengthIn35mmFormat: return "FocalLengthIn35mmFormat";
+            case TAG_SceneCaptureType: return "SceneCaptureType";
+            case TAG_GainControl: return "GainControl";
+            case TAG_Contrast: return "Contrast";
+            case TAG_Saturation: return "Saturation";
+            case TAG_Sharpness: return "Sharpness";
+            case TAG_DeviceSettingDescription: return "DeviceSettingDescription";
+            case TAG_SubjectDistanceRange: return "SubjectDistanceRange";
+
+            case TAG_ImageUniqueID: return "ImageUniqueID";
+            case TAG_CameraOwnerName: return "CameraOwnerName";
+            case TAG_BodySerialNumber: return "BodySerialNumber";
+            case TAG_LensSpecification: return "LensSpecification";
+            case TAG_LensMake: return "LensMake";
+            case TAG_LensModel: return "LensModel";
+            case TAG_LensSerialNumber: return "LensSerialNumber";
+            case TAG_Gamma: return "Gamma";
+            case TAG_PrintIM: return "PrintIM";
+            case TAG_Padding: return "Padding";
+            default: ;
+        }
+    } else if (ifdType == IFD_GPS) {
+        switch (tagId) {
+            case TAG_GPSVersionID: return "GPSVersionID";
+            case TAG_GPSLatitudeRef: return "GPSLatitudeRef";
+            case TAG_GPSLatitude: return "GPSLatitude";
+            case TAG_GPSLongitudeRef: return "GPSLongitudeRef";
+            case TAG_GPSLongitude: return "GPSLongitude";
+            case TAG_GPSAltitudeRef: return "GPSAltitudeRef";
+            case TAG_GPSAltitude: return "GPSAltitude";
+            case TAG_GPSTimeStamp: return "GPSTimeStamp";
+            case TAG_GPSSatellites: return "GPSSatellites";
+            case TAG_GPSStatus: return "GPSStatus";
+            case TAG_GPSMeasureMode: return "GPSMeasureMode";
+            case TAG_GPSDOP: return "GPSDOP";
+            case TAG_GPSSpeedRef: return "GPSSpeedRef";
+            case TAG_GPSSpeed: return "GPSSpeed";
+            case TAG_GPSTrackRef: return "GPSTrackRef";
+            case TAG_GPSTrack: return "GPSTrack";
+            case TAG_GPSImgDirectionRef: return "GPSImgDirectionRef";
+            case TAG_GPSImgDirection: return "GPSImgDirection";
+            case TAG_GPSMapDatum: return "GPSMapDatum";
+            case TAG_GPSDestLatitudeRef: return "GPSDestLatitudeRef";
+            case TAG_GPSDestLatitude: return "GPSDestLatitude";
+            case TAG_GPSDestLongitudeRef: return "GPSDestLongitudeRef";
+            case TAG_GPSDestLongitude: return "GPSDestLongitude";
+            case TAG_GPSBearingRef: return "GPSBearingRef";
+            case TAG_GPSBearing: return "GPSBearing";
+            case TAG_GPSDestDistanceRef: return "GPSDestDistanceRef";
+            case TAG_GPSDestDistance: return "GPSDestDistance";
+            case TAG_GPSProcessingMethod: return "GPSProcessingMethod";
+            case TAG_GPSAreaInformation: return "GPSAreaInformation";
+            case TAG_GPSDateStamp: return "GPSDateStamp";
+            case TAG_GPSDifferential: return "GPSDifferential";
+            case TAG_GPSHPositioningError: return "GPSHPositioningError";
+            default: ;
+        }
+    } else if (ifdType == IFD_IO) {
+        switch (tagId) {
+            case TAG_InteroperabilityIndex: return "InteroperabilityIndex";
+            case TAG_InteroperabilityVersion: return "InteroperabilityVersion";
+            case TAG_RelatedImageFileFormat: return "RelatedImageFileFormat";
+            case TAG_RelatedImageWidth: return "RelatedImageWidth";
+            case TAG_RelatedImageHeight: return "RelatedImageHeight";
+            default: ;
+        }
+    }
+    return "(Unknown)";
 }
 
 // create the IFD table
@@ -1834,7 +1866,7 @@ static int writeExifSegment(FILE *fp, void **ifdTableArray)
     int i, x;
     unsigned int ofs;
     union _packed packed;
-    APP1_HEADER dupApp1Header = App1Header;
+    APP_HEADER dupApp1Header = App1Header;
 
     ifds[0] = getIfdTableFromIfdTableArray(ifdTableArray, IFD_0TH);
     ifds[1] = getIfdTableFromIfdTableArray(ifdTableArray, IFD_EXIF);
@@ -1848,7 +1880,7 @@ static int writeExifSegment(FILE *fp, void **ifdTableArray)
         return 0;
     }
     // get total length of the segment
-    us = sizeof(APP1_HEADER) - sizeof(short);
+    us = sizeof(APP_HEADER) - sizeof(short);
     for (x = 0; x < IFDMAX; x++) {
         if (ifds[x]) {
             us = us + ifds[x]->length;
@@ -1862,7 +1894,7 @@ static int writeExifSegment(FILE *fp, void **ifdTableArray)
     dupApp1Header.tiff.reserved = fix_short(dupApp1Header.tiff.reserved);
     dupApp1Header.tiff.Ifd0thOffset = fix_int(dupApp1Header.tiff.Ifd0thOffset);
     // write Exif segment Header
-    if (fwrite(&dupApp1Header, 1, sizeof(APP1_HEADER), fp) != sizeof(APP1_HEADER)) {
+    if (fwrite(&dupApp1Header, 1, sizeof(APP_HEADER), fp) != sizeof(APP_HEADER)) {
         return ERR_WRITE_FILE;
     }
 
@@ -2555,7 +2587,7 @@ ERR:
 
 void setDefaultApp1SegmentHader()
 {
-    memset(&App1Header, 0, sizeof(APP1_HEADER));
+    memset(&App1Header, 0, sizeof(APP_HEADER));
     App1Header.marker = (systemIsLittleEndian()) ? 0xE1FF : 0xFFE1;
     App1Header.length = 0;
     strcpy(App1Header.id, "Exif");
@@ -2575,8 +2607,8 @@ static int readApp1SegmentHeader(FILE *fp)
 {
     // read the APP1 header
     if (fseek(fp, App1StartOffset, SEEK_SET) != 0 ||
-        fread(&App1Header, 1, sizeof(APP1_HEADER), fp) <
-                                            sizeof(APP1_HEADER)) {
+        fread(&App1Header, 1, sizeof(APP_HEADER), fp) <
+                                            sizeof(APP_HEADER)) {
         return 0;
     }
     if (systemIsLittleEndian()) {
