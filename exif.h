@@ -65,7 +65,8 @@ typedef enum {
     IFD_1ST,
     IFD_EXIF,
     IFD_GPS,
-    IFD_IO
+    IFD_IO,
+	IFD_MPF
 } IFD_TYPE;
 
 // Tag Type
@@ -92,6 +93,15 @@ struct _tagNodeInfo {
     uint8_t *byteData; // byte data array
     uint16_t error;    // 0: no error 1: parse error
 };
+
+typedef struct _image_dir_ent
+{
+	uint32_t ImageFlags;
+	uint32_t ImageLength;
+	uint32_t ImageStart;
+	uint16_t Image1EntryNum;
+	uint16_t Image2EntryNum;
+} IMAGE_DIR_ENT;
 /**
  * Note:
  *
@@ -695,7 +705,7 @@ int removeAdobeMetadataSegmentFromJPEGFile(const char *inJPEGFileName,
 #define TAG_RelatedImageWidth            0x1001
 #define TAG_RelatedImageHeight           0x1002
 
-// MPO tags
+// MPF tags
 #define TAG_MPFVersion                   0xB000
 #define TAG_NumberOfImage                0xB001
 #define TAG_MPImageList                  0xB002
