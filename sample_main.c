@@ -131,7 +131,7 @@ int main(int ac, char *av[])
 
     // dump all IFD tables
     for (i = 0; ifdArray[i] != NULL; i++) {
-        dumpIfdTable(ifdArray[i]);
+        dumpIfdTable(ifdArray[i], filename);
     }
     // or dumpIfdTableArray(ifdArray);
 

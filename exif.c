@@ -513,9 +513,9 @@ IFD_TYPE getIfdType(void *pIfd)
  *  [in] ifd: target IFD
  */
 
-void dumpIfdTable(void *pIfd)
+void dumpIfdTable(void *pIfd, const char* filename)
 {
-    _dumpIfdTable(pIfd, NULL);
+    _dumpIfdTable(pIfd, NULL, filename);
 }
 
 void getIfdTableDump(void *pIfd, char **pp)
@@ -526,7 +526,7 @@ void getIfdTableDump(void *pIfd, char **pp)
     _dumpIfdTable(pIfd, pp);
 }
 
-static void _dumpIfdTable(void *pIfd, char **p)
+static void _dumpIfdTable(void *pIfd, char **p, const char* filename)
 {
     int i;
     IfdTable *ifd;
@@ -613,9 +613,26 @@ static void _dumpIfdTable(void *pIfd, char **p)
 					for (i = 0; i < count; i += 16) {
 						IMAGE_DIR_ENT* pDir = (IMAGE_DIR_ENT*) (tag->byteData + i);
 						PRINTF(p, "\n%08x ", fix_int((unsigned int)pDir->ImageFlags));
-						PRINTF(p, "(%u bytes) ", fix_int((unsigned int)pDir->ImageLength));
-						PRINTF(p, "@ %08x ", fix_int((unsigned int)pDir->ImageStart));
+						uint32_t length = fix_int((unsigned int)pDir->ImageLength);
+						PRINTF(p, "(%u bytes) ", length);
+                        uint32_t off = fix_int((unsigned int)pDir->ImageStart);
+						uint32_t start = (off > 0) ? (MPFStartOffset + 8 + off) : 0;
+						PRINTF(p, "@ %08x => %08x ", off, start);
 						PRINTF(p, "%04x %04x", fix_short(pDir->Image1EntryNum), fix_short(pDir->Image2EntryNum));
+						// Extract image from original filename
+						char pathname[MAX_PATH];
+						sprintf(pathname, "Extract%d.jpg", i / 16);
+						fprintf(stderr, "Write %s (%u bytes)\n", pathname, length);
+						FILE* fextract = fopen(pathname, "wb");
+						FILE* finput = fopen(filename, "rb");
+						fseek(finput, start, SEEK_SET);
+						for (int b = 0; b < length; ++b)
+						{
+							int c = fgetc(finput);
+							fputc(c, fextract);
+						}
+						fclose(finput);
+						fclose(fextract);
 					}
 				}
 				else {
@@ -676,12 +693,12 @@ static void _dumpIfdTable(void *pIfd, char **p)
  * parameters
  *  [in] ifdArray : address of the IFD array
  */
-void dumpIfdTableArray(void **ifdArray)
+void dumpIfdTableArray(void **ifdArray, const char* filename)
 {
     int i;
     if (ifdArray) {
         for (i = 0; ifdArray[i] != NULL; i++) {
-            dumpIfdTable(ifdArray[i]);
+            dumpIfdTable(ifdArray[i], filename);
         }
     }
 }
